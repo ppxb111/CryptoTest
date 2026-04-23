@@ -23,5 +23,5 @@ jobs:
 
       - name: Run Test
         run: |
-          echo "👇 开始运行测试程序..."
+          echo "开始运行测试程序..."
           ./CryptoTest
