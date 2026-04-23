@@ -3,90 +3,29 @@ name: Build Crypto Test
 on:
   push:
     branches: [ "main" ]
-  workflow_dispatch: # 允许手动点击按钮触发
+  workflow_dispatch: # 允许手动点击运行
 
 jobs:
   build:
-    runs-on: macos-latest # 关键：告诉 GitHub 使用 Mac 服务器
-    
+    runs-on: macos-latest # 使用 GitHub 提供的最新 Mac 服务器
+
     steps:
-    - name: 检出代码
-      uses: actions/checkout@v3
+      # 1. 下载你的代码
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: 运行 Swift 脚本测试
-      run: |
-        echo "☁️ 正在云端 Mac 上运行测试..."
-        swift CryptoTestApp/main.swift
-        
-    - name: 创建 Xcode 项目 (简易版)
-      run: |
-        # 这里我们用一个简单的技巧：直接生成一个最基础的 Xcode 项目结构
-        # 这样 GitHub 就能把它打包成 .app 或 .ipa
-        mkdir -p TestApp.xcodeproj
-        cat > TestApp.xcodeproj/project.pbxproj << 'EOT'
-// !$*UTF8*$!
-{
-	archiveVersion = 1;
-	classes = {
-	};
-	objectVersion = 54;
-	objects = {
-		8A1234562B12345600123456 /* Project object */ = {
-			isa = PBXProject;
-			attributes = {
-				BuildIndependentTargetsInParallel = 1;
-			};
-			buildConfigurationList = 8A1234562B12345600123457;
-			compatibilityVersion = "Xcode 14.0";
-			developmentRegion = en;
-			hasScannedForEncodings = 0;
-			knownRegions = (
-				en,
-				Base,
-			);
-			mainGroup = 8A1234562B12345600123458;
-			productRefGroup = 8A1234562B12345600123459;
-			projectDirPath = "";
-			projectRoot = "";
-			targets = (
-				8A1234562B12345600123460,
-			);
-		};
-        /* 省略部分复杂配置，为了简化，我们直接编译 swift 文件为可执行文件 */
-EOT
-        # 注意：上面的 pbxproj 是简化的，实际上 GitHub Actions 直接编译 Swift 文件更简单
-        # 我们换个策略：直接编译成 macOS 命令行工具演示，或者尝试打包
-        
-    - name: 编译 iOS App (使用 xcodebuild)
-      run: |
-        # 为了真正生成 iPhone App，我们需要一个真实的 Xcode 项目
-        # 鉴于在网页上手写 pbxproj 太复杂，我们采用“Swift Package Manager” 方式打包
-        # 创建一个 Package.swift
-        cat > Package.swift << 'EOT'
-// swift-tools-version:5.5
-import PackageDescription
+      # 2. 选择 Xcode 版本
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_15.2.app
 
-let package = Package(
-    name: "CryptoTest",
-    platforms: [.iOS(.v14)],
-    products: [
-        .executable(name: "CryptoTest", targets: ["CryptoTest"])
-    ],
-    targets: [
-        .executableTarget(
-            name: "CryptoTest",
-            path: "CryptoTestApp",
-            sources: ["main.swift"]
-        )
-    ]
-)
-EOT
+      # 3. 编译 Swift 代码 (核心步骤)
+      - name: Build Swift Script
+        run: |
+          # 假设你的 Swift 代码文件叫 main.swift，放在仓库根目录
+          # 我们把它编译成一个叫 CryptoTest 的可执行文件
+          swiftc -o CryptoTest main.swift
 
-        # 编译！
-        swift build -c release --arch arm64
-        
-    - name: 上传产物
-      uses: actions/upload-artifact@v3
-      with:
-        name: CryptoTest-App
-        path: .build/release/CryptoTest
+      # 4. 运行测试 (在云端跑一下看看结果)
+      - name: Run Test
+        run: |
+          ./CryptoTest
