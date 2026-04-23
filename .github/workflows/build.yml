@@ -2,28 +2,26 @@ name: Build Crypto Test
 
 on:
   push:
+    branches: [ "main" ] 
+  pull_request:
     branches: [ "main" ]
-  workflow_dispatch: # 允许手动点击运行
 
 jobs:
   build:
-    runs-on: macos-latest # 使用 GitHub 提供的最新 Mac 服务器
+    runs-on: macos-latest
 
     steps:
-      # 1. 下载你的代码
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2. 选择 Xcode 版本
-      - name: Select Latest Xcode
-        run: sudo xcode-select --switch /Applications/Xcode.app
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app
 
 
-      # 3. 编译 Swift 代码 (核心步骤)
       - name: Build Swift Script
-        run: swift crypto.swift
+        run: swiftc crypto.swift -o CryptoTest
 
-      # 4. 运行测试 (在云端跑一下看看结果)
       - name: Run Test
         run: |
+          echo "👇 开始运行测试程序..."
           ./CryptoTest
