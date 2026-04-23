@@ -21,10 +21,7 @@ jobs:
 
       # 3. 编译 Swift 代码 (核心步骤)
       - name: Build Swift Script
-        run: |
-          # 假设你的 Swift 代码文件叫 main.swift，放在仓库根目录
-          # 我们把它编译成一个叫 CryptoTest 的可执行文件
-          swiftc -o CryptoTest crypto.swift
+        run: swiftc -o CryptoTest crypto.swift
 
       # 4. 运行测试 (在云端跑一下看看结果)
       - name: Run Test
