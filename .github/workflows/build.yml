@@ -15,8 +15,9 @@ jobs:
         uses: actions/checkout@v4
 
       # 2. 选择 Xcode 版本
-      - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode_15.2.app
+      - name: Select Latest Xcode
+        run: sudo xcode-select --switch /Applications/Xcode.app
+
 
       # 3. 编译 Swift 代码 (核心步骤)
       - name: Build Swift Script
