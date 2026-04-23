@@ -1,6 +1,5 @@
 import Foundation
 import CryptoKit
-
 @main
 struct CryptoLoadTestApp {
     static func main() {
