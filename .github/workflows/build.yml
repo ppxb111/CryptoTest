@@ -19,7 +19,7 @@ jobs:
 
 
       - name: Build Swift Script
-        run: swiftc crypto.swift -o CryptoTest
+        run: swiftc -parse-as-library crypto.swift -o CryptoTest
 
       - name: Run Test
         run: |
