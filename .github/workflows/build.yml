@@ -1,48 +1,77 @@
-name: Build iOS App
+name: Build iOS Script
 
 on:
   push:
-    branches: [ "main" ]
-  workflow_dispatch:
+    branches: "main" 
+  workflow_dispatch: 
 
 jobs:
-  build:
-    runs-on: macos-latest 
+  build-ios:
+    name: Build and Archive
+    runs-on: macos-latest # 必须使用 macOS 环境
 
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v4
+      # 1. 拉取代码
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-    - name: Create Minimal Xcode Project
-      run: |
-        mkdir CryptoProject
-        cd CryptoProject
-        xcodebuild -create-xcodeproject \
-          -template "com.apple.ios.template.singleViewApp:com.apple.ios.template.singleViewApp" \
-          -destination "platform=iOS" \
-          -product "CryptoApp" \
-          -organization "TestOrg" \
-          -language Swift
-        cp ../crypto.swift ./CryptoApp/
+      # 2. 创建临时的 Xcode 项目结构
+      - name: Setup Xcode Project
+        run: |
+          # 创建工程目录
+          mkdir iOSApp
+          cd iOSApp
+          
+          
+          xcodebuild -createproject iOSApp.xcodeproj -name iOSApp -destination platform="iOS"
+          
+          
+          mkdir -p iOSApp
+          touch iOSApp/Main.storyboard
 
-        ls -la ./CryptoApp/
+          
+          cp ../crypto.swift iOSApp/
 
-    - name: Build IPA
-      run: |
-        cd CryptoProject
-        xcodebuild build \
-          -project CryptoApp.xcodeproj \
-          -scheme CryptoApp \
-          -destination "generic/platform=iOS" \
-          -configuration Release \
-          -derivedDataPath Build \
-          CODE_SIGNING_ALLOWED=NO
+          echo "✅ 项目结构创建完成"
+          ls -R
 
-        mkdir ../output
-        mv Build/Build/Products/Release-iphoneos/CryptoApp.app ../output/
 
-    - name: Upload Artifact
-      uses: actions/upload-artifact@v3
-      with:
-        name: CryptoApp
-        path: output/CryptoApp.app
+      - name: Build iOS App
+        run: |
+          cd iOSApp
+          
+          # 执行构建命令
+          # -sdk iphoneos: 指定构建 iOS 真机版本
+          # CODE_SIGNING_ALLOWED=NO: 【关键】不需要签名也能生成可执行文件，方便测试
+          # ONLY_ACTIVE_ARCH=NO: 包含所有架构
+          xcodebuild build \
+            -project iOSApp.xcodeproj \
+            -target iOSApp \
+            -sdk iphoneos \
+            -configuration Release \
+            CODE_SIGNING_ALLOWED=NO \
+            ONLY_ACTIVE_ARCH=NO \
+            TARGETED_DEVICE_FAMILY=1
+
+
+      - name: Package App
+        run: |
+          # 创建 Payload 文件夹（这是生成 ipa 的标准结构）
+          mkdir -p Payload
+          
+          # 找到构建生成的 .app 文件并复制到 Payload 中
+          # 路径可能较深，使用通配符查找
+          cp -R build/Release-iphoneos/iOSApp.app Payload/
+          
+          # 打包成 ipa
+          zip -r CryptoScript.ipa Payload/
+          
+          echo "✅ IPA 生成完成"
+
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: CryptoScript-IPA
+          path: Payload/CryptoScript.ipa
+          if-no-files-found: error
