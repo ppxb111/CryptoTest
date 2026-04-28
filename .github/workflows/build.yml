@@ -11,18 +11,17 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      # 1. 拉取仓库
+      # 1. 拉取仓库代码
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # 2. 创建 SwiftUI 入口 main.swift（调用你的 crypto.swift）
+      # 2. 动态生成 main.swift（不会影响你的本地仓库）
       - name: Create App Entry Point
         run: |
           cat > main.swift << 'EOF'
           import SwiftUI
 
-          // 在你的 crypto.swift 中实现一个 runCrypto() 函数供这里调用
-          @main
+          // 直接使用你的 crypto.swift 中定义的 runCrypto()
           struct CryptoApp: App {
               var body: some Scene {
                   WindowGroup {
@@ -35,16 +34,18 @@ jobs:
               var body: some View {
                   Text("Crypto App")
                       .onAppear {
-                          runCrypto()      // 调用你 crypto.swift 里的函数
+                          runCrypto()      // ✅ 调用你的函数
                       }
               }
           }
+
+          // 手动启动 SwiftUI App（不用 @main，避免与顶层代码冲突）
+          CryptoApp.main()
           EOF
 
-      # 3. 编译 ARM64 iOS 可执行文件
+      # 3. 编译为 ARM64 iOS 可执行文件
       - name: Compile for iOS
         run: |
-          # 使用 iOS SDK 编译，目标 iOS 14.0
           xcrun --sdk iphoneos swiftc \
             -target arm64-apple-ios14.0 \
             -O \
@@ -54,18 +55,15 @@ jobs:
             -framework UIKit \
             -framework Foundation
 
-      # 4. 手动创建 .app 结构
+      # 4. 手动创建 .app 包结构
       - name: Assemble .app Bundle
         run: |
           APP_NAME="iOSApp"
           BUNDLE_DIR="${APP_NAME}.app"
-
           mkdir -p "${BUNDLE_DIR}"
-
-          # 放入可执行文件
           cp iOSApp "${BUNDLE_DIR}/${APP_NAME}"
 
-          # 创建 Info.plist
+          # Info.plist（必需）
           cat > "${BUNDLE_DIR}/Info.plist" << 'EOF'
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
@@ -97,13 +95,12 @@ jobs:
           </plist>
           EOF
 
-          # 可选，创建空 PkgInfo
+          # PkgInfo（可选）
           echo "APPL????" > "${BUNDLE_DIR}/PkgInfo"
 
-      # 5. 进行 Ad‑Hoc 签名（让 .app 具备基本签名，否则无法打包）
+      # 5. 使用 Ad‑Hoc 签名（生成可打包的 .app）
       - name: Ad-Hoc Sign the App
-        run: |
-          codesign --force --sign - iOSApp.app
+        run: codesign --force --sign - iOSApp.app
 
       # 6. 打包为 .ipa
       - name: Package into IPA
@@ -113,7 +110,7 @@ jobs:
           zip -r CryptoScript.ipa Payload/
           echo "✅ IPA 生成完成"
 
-      # 7. 上传产物
+      # 7. 上传 IPA 到工作流 artifacts
       - name: Upload IPA Artifact
         uses: actions/upload-artifact@v4
         with:
