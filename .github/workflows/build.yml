@@ -1,77 +1,122 @@
-name: Build iOS Script
+name: Build iOS Script into App
 
 on:
   push:
-    branches: "main" 
-  workflow_dispatch: 
+    branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
   build-ios:
-    name: Build and Archive
-    runs-on: macos-latest # 必须使用 macOS 环境
+    name: Build and Package IPA
+    runs-on: macos-latest
 
     steps:
-      # 1. 拉取代码
+      # 1. 拉取仓库
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # 2. 创建临时的 Xcode 项目结构
-      - name: Setup Xcode Project
+      # 2. 创建 SwiftUI 入口 main.swift（调用你的 crypto.swift）
+      - name: Create App Entry Point
         run: |
-          # 创建工程目录
-          mkdir iOSApp
-          cd iOSApp
-          
-          
-          xcodebuild -createproject iOSApp.xcodeproj -name iOSApp -destination platform="iOS"
-          
-          
-          mkdir -p iOSApp
-          touch iOSApp/Main.storyboard
+          cat > main.swift << 'EOF'
+          import SwiftUI
 
-          
-          cp ../crypto.swift iOSApp/
+          // 在你的 crypto.swift 中实现一个 runCrypto() 函数供这里调用
+          @main
+          struct CryptoApp: App {
+              var body: some Scene {
+                  WindowGroup {
+                      ContentView()
+                  }
+              }
+          }
 
-          echo "✅ 项目结构创建完成"
-          ls -R
+          struct ContentView: View {
+              var body: some View {
+                  Text("Crypto App")
+                      .onAppear {
+                          runCrypto()      // 调用你 crypto.swift 里的函数
+                      }
+              }
+          }
+          EOF
 
-
-      - name: Build iOS App
+      # 3. 编译 ARM64 iOS 可执行文件
+      - name: Compile for iOS
         run: |
-          cd iOSApp
-          
-          # 执行构建命令
-          # -sdk iphoneos: 指定构建 iOS 真机版本
-          # CODE_SIGNING_ALLOWED=NO: 【关键】不需要签名也能生成可执行文件，方便测试
-          # ONLY_ACTIVE_ARCH=NO: 包含所有架构
-          xcodebuild build \
-            -project iOSApp.xcodeproj \
-            -target iOSApp \
-            -sdk iphoneos \
-            -configuration Release \
-            CODE_SIGNING_ALLOWED=NO \
-            ONLY_ACTIVE_ARCH=NO \
-            TARGETED_DEVICE_FAMILY=1
+          # 使用 iOS SDK 编译，目标 iOS 14.0
+          xcrun --sdk iphoneos swiftc \
+            -target arm64-apple-ios14.0 \
+            -O \
+            -o iOSApp \
+            main.swift crypto.swift \
+            -framework SwiftUI \
+            -framework UIKit \
+            -framework Foundation
 
-
-      - name: Package App
+      # 4. 手动创建 .app 结构
+      - name: Assemble .app Bundle
         run: |
-          # 创建 Payload 文件夹（这是生成 ipa 的标准结构）
-          mkdir -p Payload
-          
-          # 找到构建生成的 .app 文件并复制到 Payload 中
-          # 路径可能较深，使用通配符查找
-          cp -R build/Release-iphoneos/iOSApp.app Payload/
-          
-          # 打包成 ipa
+          APP_NAME="iOSApp"
+          BUNDLE_DIR="${APP_NAME}.app"
+
+          mkdir -p "${BUNDLE_DIR}"
+
+          # 放入可执行文件
+          cp iOSApp "${BUNDLE_DIR}/${APP_NAME}"
+
+          # 创建 Info.plist
+          cat > "${BUNDLE_DIR}/Info.plist" << 'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+           "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>CFBundleExecutable</key>
+              <string>iOSApp</string>
+              <key>CFBundleIdentifier</key>
+              <string>com.example.crypto</string>
+              <key>CFBundleName</key>
+              <string>CryptoScript</string>
+              <key>CFBundlePackageType</key>
+              <string>APPL</string>
+              <key>CFBundleShortVersionString</key>
+              <string>1.0</string>
+              <key>CFBundleVersion</key>
+              <string>1</string>
+              <key>UIApplicationSceneManifest</key>
+              <dict>
+                  <key>UIApplicationSupportsMultipleScenes</key>
+                  <false/>
+                  <key>UISceneConfigurations</key>
+                  <dict/>
+              </dict>
+              <key>UILaunchScreen</key>
+              <dict/>
+          </dict>
+          </plist>
+          EOF
+
+          # 可选，创建空 PkgInfo
+          echo "APPL????" > "${BUNDLE_DIR}/PkgInfo"
+
+      # 5. 进行 Ad‑Hoc 签名（让 .app 具备基本签名，否则无法打包）
+      - name: Ad-Hoc Sign the App
+        run: |
+          codesign --force --sign - iOSApp.app
+
+      # 6. 打包为 .ipa
+      - name: Package into IPA
+        run: |
+          mkdir Payload
+          cp -R iOSApp.app Payload/
           zip -r CryptoScript.ipa Payload/
-          
           echo "✅ IPA 生成完成"
 
-
-      - name: Upload Artifact
+      # 7. 上传产物
+      - name: Upload IPA Artifact
         uses: actions/upload-artifact@v4
         with:
           name: CryptoScript-IPA
-          path: Payload/CryptoScript.ipa
+          path: CryptoScript.ipa
           if-no-files-found: error
