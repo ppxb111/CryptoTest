@@ -2,9 +2,8 @@ import Foundation
 import CryptoKit
 
 public func runCrypto() {
-    print("开始 CryptoKit 测试...")
-        print("任务：连续生成 1,000,000 个 SymmetricKey (.bits256)")
-        let startTime = CFAbsoluteTimeGetCurrent()
+    print("CryptoKit 测试...")
+        print("准备生成")
         var checksum: UInt64 = 0
         for i in 1...1_000_000 {
             let key = SymmetricKey(size: .bits256)
@@ -14,10 +13,6 @@ public func runCrypto() {
                 print("已生成 \(i) 个密钥...")
             }
         }
-        let timeElapsed = CFAbsoluteTimeGetCurrent() - startTime
-        print("--------------------------------")
         print("测试完成！")
-        print("总耗时: \(String(format: "%.2f", timeElapsed)) 秒")
-        print("--------------------------------")
 }
 
