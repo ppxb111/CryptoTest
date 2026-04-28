@@ -2,12 +2,12 @@ name: Build iOS App
 
 on:
   push:
-    branches: [ "main" ] # 或者是你的主分支名
-  workflow_dispatch: # 允许手动触发
+    branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
   build:
-    runs-on: macos-latest # 必须使用 macOS 环境
+    runs-on: macos-latest 
 
     steps:
     - name: Checkout Code
@@ -15,33 +15,21 @@ jobs:
 
     - name: Create Minimal Xcode Project
       run: |
-        # 1. 创建一个临时的 iOS 工程目录
         mkdir CryptoProject
         cd CryptoProject
-
-        # 2. 使用 xcodebuild 创建一个空的 iOS 应用工程
-        # -template: 指定模板为 iOS App
-        # -destination: 指定平台
-        # -product: 指定产品名称
         xcodebuild -create-xcodeproject \
           -template "com.apple.ios.template.singleViewApp:com.apple.ios.template.singleViewApp" \
           -destination "platform=iOS" \
           -product "CryptoApp" \
           -organization "TestOrg" \
           -language Swift
-
-        # 3. 将你的脚本从仓库根目录复制到工程目录
-        # 假设 crypto.swift 在仓库根目录
         cp ../crypto.swift ./CryptoApp/
 
-        # 4. (可选) 检查文件是否复制成功
         ls -la ./CryptoApp/
 
     - name: Build IPA
       run: |
         cd CryptoProject
-        # 这里仅进行编译，不进行签名，生成 .app 文件
-        # 为了演示，我们只编译到 build 目录
         xcodebuild build \
           -project CryptoApp.xcodeproj \
           -scheme CryptoApp \
@@ -50,7 +38,6 @@ jobs:
           -derivedDataPath Build \
           CODE_SIGNING_ALLOWED=NO
 
-        # 将编译好的 .app 文件移动到根目录以便后续步骤使用
         mkdir ../output
         mv Build/Build/Products/Release-iphoneos/CryptoApp.app ../output/
 
