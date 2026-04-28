@@ -11,17 +11,15 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      # 1. 拉取仓库代码
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # 2. 动态生成 main.swift（不会影响你的本地仓库）
       - name: Create App Entry Point
         run: |
           cat > main.swift << 'EOF'
           import SwiftUI
+          import UIKit
 
-          // 直接使用你的 crypto.swift 中定义的 runCrypto()
           struct CryptoApp: App {
               var body: some Scene {
                   WindowGroup {
@@ -31,19 +29,35 @@ jobs:
           }
 
           struct ContentView: View {
+              @State var message: String = "等待运行"
+
               var body: some View {
-                  Text("Crypto App")
-                      .onAppear {
-                          runCrypto()      // ✅ 调用你的函数
+                  VStack {
+                      Text(message)
+                          .padding()
+                      Button("开始测试") {
+                          NSLog("触发测试")
+                          runCrypto()
+                          message = "测试启动 查看日志"
                       }
+                      .padding()
+                      .background(Color.blue)
+                      .foregroundColor(.white)
+                      .cornerRadius(8)
+                  }
+                  .onAppear {
+                      DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                          NSLog("应用已启动")
+                          runCrypto()
+                          message = "自动运行完成"
+                      }
+                  }
               }
           }
 
-          // 手动启动 SwiftUI App（不用 @main，避免与顶层代码冲突）
           CryptoApp.main()
           EOF
 
-      # 3. 编译为 ARM64 iOS 可执行文件
       - name: Compile for iOS
         run: |
           xcrun --sdk iphoneos swiftc \
@@ -55,7 +69,6 @@ jobs:
             -framework UIKit \
             -framework Foundation
 
-      # 4. 手动创建 .app 包结构
       - name: Assemble .app Bundle
         run: |
           APP_NAME="iOSApp"
@@ -63,7 +76,7 @@ jobs:
           mkdir -p "${BUNDLE_DIR}"
           cp iOSApp "${BUNDLE_DIR}/${APP_NAME}"
 
-          # Info.plist（必需）
+          # Info.plist
           cat > "${BUNDLE_DIR}/Info.plist" << 'EOF'
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
@@ -73,7 +86,7 @@ jobs:
               <key>CFBundleExecutable</key>
               <string>iOSApp</string>
               <key>CFBundleIdentifier</key>
-              <string>com.ppxb.crypto</string>
+              <string>com.example.crypto</string>
               <key>CFBundleName</key>
               <string>CryptoScript</string>
               <key>CFBundlePackageType</key>
@@ -91,18 +104,63 @@ jobs:
               </dict>
               <key>UILaunchScreen</key>
               <dict/>
+              <key>UILaunchStoryboardName</key>
+              <string>LaunchScreen</string>
+              <key>UISupportedInterfaceOrientations</key>
+              <array>
+                  <string>UIInterfaceOrientationPortrait</string>
+              </array>
           </dict>
           </plist>
           EOF
 
-          # PkgInfo（可选）
+          # PkgInfo
           echo "APPL????" > "${BUNDLE_DIR}/PkgInfo"
 
-      # 5. 使用 Ad‑Hoc 签名（生成可打包的 .app）
+          # LaunchScreen.storyboard
+          cat > "${BUNDLE_DIR}/LaunchScreen.storyboard" << 'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="21701" targetRuntime="AppleSDK" propertyAccessControl="none" useAutolayout="YES" launchScreen="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES" initialViewController="01J-lp-oVM">
+              <device id="retina6_12" orientation="portrait" appearance="light"/>
+              <dependencies>
+                  <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="21678"/>
+                  <capability name="Safe area layout guides" minToolsVersion="9.0"/>
+                  <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
+              </dependencies>
+              <scenes>
+                  <scene sceneID="EHf-IW-A2E">
+                      <objects>
+                          <viewController id="01J-lp-oVM" sceneMemberID="viewController">
+                              <view key="view" contentMode="scaleToFill" id="Ze5-6b-2t3">
+                                  <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
+                                  <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                                  <subviews>
+                                      <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="750" text="Crypto Test" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="abc-def">
+                                          <rect key="frame" x="50" y="400" width="293" height="50"/>
+                                          <fontDescription key="fontDescription" type="system" pointSize="24"/>
+                                          <nil key="textColor"/>
+                                          <nil key="highlightedColor"/>
+                                      </label>
+                                  </subviews>
+                                  <viewLayoutGuide key="safeArea" id="6Tk-OE-BBY"/>
+                                  <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                                  <constraints>
+                                      <constraint firstItem="abc-def" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="cx1"/>
+                                      <constraint firstItem="abc-def" firstAttribute="centerY" secondItem="Ze5-6b-2t3" secondAttribute="centerY" id="cy1"/>
+                                  </constraints>
+                              </view>
+                          </viewController>
+                          <placeholder placeholderIdentifier="IBFirstResponder" id="iYj-Kq-Ea1" userLabel="First Responder" sceneMemberID="firstResponder"/>
+                      </objects>
+                      <point key="canvasLocation" x="53" y="375"/>
+                  </scene>
+              </scenes>
+          </document>
+          EOF
+
       - name: Ad-Hoc Sign the App
         run: codesign --force --sign - iOSApp.app
 
-      # 6. 打包为 .ipa
       - name: Package into IPA
         run: |
           mkdir Payload
@@ -110,7 +168,6 @@ jobs:
           zip -r CryptoScript.ipa Payload/
           echo "✅ IPA 生成完成"
 
-      # 7. 上传 IPA 到工作流 artifacts
       - name: Upload IPA Artifact
         uses: actions/upload-artifact@v4
         with:
