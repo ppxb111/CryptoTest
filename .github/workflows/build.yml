@@ -18,7 +18,6 @@ jobs:
         run: |
           cat > main.swift << 'EOF'
           import SwiftUI
-          import UIKit
 
           struct CryptoApp: App {
               var body: some Scene {
@@ -29,29 +28,17 @@ jobs:
           }
 
           struct ContentView: View {
-              @State var message: String = "等待运行"
+              @State var resultText: String = "正在运行..."
 
               var body: some View {
-                  VStack {
-                      Text(message)
-                          .padding()
-                      Button("开始测试") {
-                          NSLog("触发测试")
-                          runCrypto()
-                          message = "测试启动 查看日志"
-                      }
+                  Text(resultText)
+                      .multilineTextAlignment(.center)
                       .padding()
-                      .background(Color.blue)
-                      .foregroundColor(.white)
-                      .cornerRadius(8)
-                  }
-                  .onAppear {
-                      DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                          NSLog("应用已启动")
-                          runCrypto()
-                          message = "自动运行完成"
+                      .onAppear {
+                          // 在视图出现时执行测试，并把结果更新到界面
+                          let output = runCrypto()
+                          resultText = output
                       }
-                  }
               }
           }
 
