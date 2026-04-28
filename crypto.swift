@@ -11,6 +11,6 @@ public func runCrypto() -> String {
     }
     let elapsed = CFAbsoluteTimeGetCurrent() - startTime
     let result = "完成 100万 密钥生成\n耗时: \(String(format: "%.2f", elapsed)) 秒"
-    NSLog(result)  // 同时记录日志
+    NSLog(result)
     return result
 }
