@@ -1,9 +1,8 @@
 import Foundation
 import CryptoKit
-@main
-struct CryptoLoadTestApp {
-    static func main() {
-        print("开始 CryptoKit 测试...")
+
+public func runCrypto() {
+    print("开始 CryptoKit 测试...")
         print("任务：连续生成 1,000,000 个 SymmetricKey (.bits256)")
         let startTime = CFAbsoluteTimeGetCurrent()
         var checksum: UInt64 = 0
@@ -20,5 +19,5 @@ struct CryptoLoadTestApp {
         print("测试完成！")
         print("总耗时: \(String(format: "%.2f", timeElapsed)) 秒")
         print("--------------------------------")
-    }
 }
+
